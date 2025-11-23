@@ -2,9 +2,9 @@ services:
   - type: web
     name: Rideer_Application_Api
     env: java
+    plan: free
     buildCommand: "./mvnw clean package -DskipTests"
     startCommand: "java -jar target/*.jar"
-    plan: free
     envVars:
       - key: SPRING_PROFILES_ACTIVE
         value: production
