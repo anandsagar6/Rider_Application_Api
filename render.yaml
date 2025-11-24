@@ -1,6 +1,7 @@
 services:
   - type: web
-    name: Rider_Application_Api
+    name: rider_application_api
+    rootDir: .
     runtime: java
     buildCommand: "./mvnw clean install -DskipTests"
     startCommand: "java -jar target/*.jar"
