@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: Rideer_Application_Api
+    name: Rider_Application_Api
     runtime: java
     buildCommand: "./mvnw clean install -DskipTests"
     startCommand: "java -jar target/*.jar"
