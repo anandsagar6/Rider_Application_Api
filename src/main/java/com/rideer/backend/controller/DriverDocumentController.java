@@ -21,51 +21,22 @@ public class DriverDocumentController {
         this.s3Service = s3Service;
     }
 
-    // ==========================
-    // 📌 Upload document API
-    // ==========================
-    @PostMapping("/{driverId}/upload")
+    @PostMapping("/upload")
     public ResponseEntity<UploadResponse> upload(
-            @PathVariable String driverId,
+            @RequestParam("phone") String phone,
             @RequestParam("file") MultipartFile file,
             @RequestParam("type") String type
     ) {
         try {
             DocumentType docType = DocumentType.valueOf(type.toUpperCase());
-            String key = s3Service.uploadDocument(file, driverId, docType);
-            URL url = s3Service.getPresignedUrl(key, Duration.ofMinutes(15));
 
-            return ResponseEntity.ok(
-                    new UploadResponse(true, key, url.toString(), "Uploaded Successfully")
-            );
+            String key = s3Service.uploadDocument(file, phone, docType);
 
+            URL url = s3Service.getPresignedUrl(key, Duration.ofMinutes(30));
+
+            return ResponseEntity.ok(new UploadResponse(true, key, url.toString(), "Uploaded Successfully"));
         } catch (Exception e) {
-            return ResponseEntity.badRequest()
-                    .body(new UploadResponse(false, null, null, e.getMessage()));
-        }
-    }
-
-    // ==========================
-    // 📌 Fetch document API
-    // ==========================
-    @GetMapping("/{driverId}/document")
-    public ResponseEntity<UploadResponse> getDocument(
-            @PathVariable String driverId,
-            @RequestParam("type") String type
-    ) {
-        try {
-            DocumentType docType = DocumentType.valueOf(type.toUpperCase());
-            String key = "drivers/" + driverId + "/" + docType.toFileName() + ".jpg";
-
-            URL url = s3Service.getPresignedUrl(key, Duration.ofMinutes(15));
-
-            return ResponseEntity.ok(
-                    new UploadResponse(true, key, url.toString(), "Fetched Successfully")
-            );
-
-        } catch (Exception e) {
-            return ResponseEntity.badRequest()
-                    .body(new UploadResponse(false, null, null, e.getMessage()));
+            return ResponseEntity.badRequest().body(new UploadResponse(false, null, null, e.getMessage()));
         }
     }
 }

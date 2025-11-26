@@ -8,53 +8,62 @@ import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.presigner.S3Presigner;
+import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import software.amazon.awssdk.services.s3.presigner.model.GetObjectPresignRequest;
-import software.amazon.awssdk.services.s3.presigner.model.PresignedGetObjectRequest;
 
 import java.io.IOException;
 import java.net.URL;
 import java.time.Duration;
-import java.time.Instant;
 
 @Service
 public class S3StorageService {
 
     private final S3Client s3Client;
-    private final S3Presigner s3Presigner;
+    private final S3Presigner presigner;
 
-    @Value("${aws.s3.bucket-name}")
+    @Value("${aws.s3.bucket}")
     private String bucketName;
 
-    public S3StorageService(S3Client s3Client, S3Presigner s3Presigner) {
+    public S3StorageService(S3Client s3Client, S3Presigner presigner) {
         this.s3Client = s3Client;
-        this.s3Presigner = s3Presigner;
+        this.presigner = presigner;
     }
 
-    private String buildKey(String driverId, DocumentType type) {
-        return "drivers/" + driverId + "/" + type.toFileName() + "_" + Instant.now().toEpochMilli() + ".jpg";
-    }
+    /**
+     * Upload file to S3
+     */
+    public String uploadDocument(MultipartFile file, String phone, DocumentType type) throws IOException {
 
-    public String uploadDocument(MultipartFile file, String driverId, DocumentType type) throws IOException {
-        String fileName = type.toFileName() + ".jpg"; // fixed file name
-        String key = "drivers/" + driverId + "/" + fileName;
+        // Folder structure example: drivers/8102380197/profile.jpg
+        String key = "drivers/" + phone + "/" + type.toFileName();
 
-        PutObjectRequest putObjectRequest = PutObjectRequest.builder()
-                .bucket(bucketName)
-                .key(key)
-                .contentType(file.getContentType())
-                .build();
+        s3Client.putObject(
+                PutObjectRequest.builder()
+                        .bucket(bucketName)
+                        .key(key)
+                        .contentType(file.getContentType())
+                        .build(),
+                RequestBody.fromBytes(file.getBytes())
+        );
 
-        s3Client.putObject(putObjectRequest, RequestBody.fromBytes(file.getBytes()));
         return key;
     }
 
+    /**
+     * Generate a temporary public download URL
+     */
     public URL getPresignedUrl(String key, Duration duration) {
-        GetObjectPresignRequest request = GetObjectPresignRequest.builder()
-                .signatureDuration(duration)
-                .getObjectRequest(b -> b.bucket(bucketName).key(key))
+
+        GetObjectRequest getObjectRequest = GetObjectRequest.builder()
+                .bucket(bucketName)
+                .key(key)
                 .build();
 
-        PresignedGetObjectRequest presigned = s3Presigner.presignGetObject(request);
-        return presigned.url();
+        GetObjectPresignRequest presignRequest = GetObjectPresignRequest.builder()
+                .signatureDuration(duration)
+                .getObjectRequest(getObjectRequest)
+                .build();
+
+        return presigner.presignGetObject(presignRequest).url();
     }
 }
